@@ -13,13 +13,24 @@ const application = createStandaloneApplication({
   allowQaRegistration: import.meta.env.DEV,
 });
 
-application.start().catch((error) => {
-  console.error("God's Eye View initialization failed:", error);
-  const loaderStatus = document.querySelector('#loading-screen .loader-status');
-  loaderStatus.textContent = t('Error: {message}', {
-    message: describeError(error),
+application
+  .start()
+  .then((components) => {
+    // Atlas Eye extras: live alerts feed and a watchlist over the running globe.
+    // A failure here must not take down the globe, so it is handled separately.
+    import('./extras/alertsPanel.js')
+      .then(({ mountAlertsPanel }) => mountAlertsPanel(components.scene.viewer))
+      .catch((error) => console.error('Atlas Eye extras failed:', error));
+  })
+  .catch((error) => {
+    console.error('Atlas Eye initialization failed:', error);
+    const loaderStatus = document.querySelector(
+      '#loading-screen .loader-status',
+    );
+    loaderStatus.textContent = t('Error: {message}', {
+      message: describeError(error),
+    });
+    loaderStatus.style.color = '#ff4444';
   });
-  loaderStatus.style.color = '#ff4444';
-});
 
 export { application };
