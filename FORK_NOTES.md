@@ -18,3 +18,10 @@ This is a fork of [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view
     npm run dev
 
 Open http://localhost:4173.
+
+## Added later
+
+- GDACS global disaster alerts (Orange/Red events, plus Green cyclones, floods and volcanoes) join the Alerts feed.
+- **Space** tab: NOAA SWPC planetary Kp index with storm level, recent solar flares (M/X class highlighted), and a toggleable aurora probability overlay on the globe.
+
+Not added: ocean buoys (NDBC) and airport weather (METAR). Their servers do not allow direct browser requests, so they would need a small proxy on the dev server.

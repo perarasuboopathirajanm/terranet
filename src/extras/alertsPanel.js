@@ -1,14 +1,27 @@
 import * as Cesium from 'cesium';
 import {
+  AURORA_URL,
   EONET_URL,
+  FLARES_URL,
+  GDACS_URL,
+  KP_URL,
   USGS_URL,
+  auroraPoints,
   createWatchlistStore,
+  latestKp,
   matchWatch,
   mergeAlerts,
   newWatchHits,
   parseEonet,
+  parseFlares,
+  parseGdacs,
   parseUsgs,
 } from './alertsCore.js';
+
+const getJson = (url) =>
+  fetch(url).then((r) =>
+    r.ok ? r.json() : Promise.reject(new Error(r.status)),
+  );
 
 const REFRESH_MS = 5 * 60 * 1000;
 
@@ -43,6 +56,7 @@ const KIND_COLOR = {
   volcanoes: '#e74c3c',
   severeStorms: '#5dade2',
   floods: '#3498db',
+  drought: '#a0522d',
 };
 const colorFor = (kind) => KIND_COLOR[kind] || '#95a5a6';
 
@@ -72,6 +86,9 @@ export function mountAlertsPanel(
   const pins = viewer.entities.add(new Cesium.Entity({ id: 'atlas-alerts' }));
   const pinIds = [];
   let alerts = [];
+  let space = { kp: null, flares: [] };
+  let auroraOn = false;
+  let auroraLayer = null;
   let tab = 'alerts';
   let disposed = false;
   let timer = 0;
@@ -86,7 +103,12 @@ export function mountAlertsPanel(
   ]);
   const tabAlerts = el('button', { textContent: 'Alerts', className: 'on' });
   const tabWatch = el('button', { textContent: 'Watchlist' });
-  const tabs = el('div', { className: 'atlas-tabs' }, [tabAlerts, tabWatch]);
+  const tabSpace = el('button', { textContent: 'Space' });
+  const tabs = el('div', { className: 'atlas-tabs' }, [
+    tabAlerts,
+    tabWatch,
+    tabSpace,
+  ]);
   const list = el('div', { className: 'atlas-list' });
   const nameInput = el('input', { placeholder: 'Name (uses current view)' });
   const radiusInput = el('input', {
@@ -134,7 +156,10 @@ export function mountAlertsPanel(
         name: a.title,
         position: Cesium.Cartesian3.fromDegrees(a.lon, a.lat),
         point: {
-          pixelSize: a.kind === 'quake' ? 6 + (a.severity - 4) * 3 : 8,
+          pixelSize:
+            a.id.startsWith('usgs:') && a.severity >= 4
+              ? 6 + (a.severity - 4) * 3
+              : 8,
           color: Cesium.Color.fromCssColorString(colorFor(a.kind)).withAlpha(
             0.85,
           ),
@@ -154,8 +179,64 @@ export function mountAlertsPanel(
     badge.classList.toggle('zero', hits.length === 0);
     tabAlerts.classList.toggle('on', tab === 'alerts');
     tabWatch.classList.toggle('on', tab === 'watch');
+    tabSpace.classList.toggle('on', tab === 'space');
     form.style.display = tab === 'watch' ? '' : 'none';
     list.replaceChildren();
+
+    if (tab === 'space') {
+      const kp = space.kp;
+      list.append(
+        el('div', { className: 'atlas-row' }, [
+          el('div', {}, [
+            el('div', {
+              textContent: kp
+                ? `Kp ${kp.kp.toFixed(1)} · ${kp.level}`
+                : 'Kp index loading…',
+            }),
+            el('div', {
+              className: 'atlas-sub',
+              textContent: kp ? `NOAA SWPC · ${timeAgo(kp.time)}` : 'NOAA SWPC',
+            }),
+          ]),
+        ]),
+      );
+      const toggle = el('button', {
+        textContent: auroraOn ? 'Hide aurora overlay' : 'Show aurora overlay',
+      });
+      toggle.onclick = () => setAurora(!auroraOn);
+      list.append(el('div', { className: 'atlas-form' }, [toggle]));
+      list.append(
+        el('div', {
+          className: 'atlas-sub',
+          textContent: 'Recent solar flares',
+        }),
+      );
+      if (!space.flares.length)
+        list.append(
+          el('div', {
+            className: 'atlas-empty',
+            textContent: 'No flare data.',
+          }),
+        );
+      for (const f of space.flares) {
+        const strong = f.strength >= 1e-5;
+        const row = el(
+          'div',
+          { className: `atlas-row${strong ? ' hit' : ''}` },
+          [
+            el('div', {}, [
+              el('div', { textContent: `${f.cls} flare` }),
+              el('div', {
+                className: 'atlas-sub',
+                textContent: `${timeAgo(f.time)}${strong ? ' · M/X class' : ''}`,
+              }),
+            ]),
+          ],
+        );
+        list.append(row);
+      }
+      return;
+    }
 
     if (tab === 'alerts') {
       if (!alerts.length)
@@ -232,24 +313,61 @@ export function mountAlertsPanel(
     }
   }
 
-  async function refresh() {
-    const results = await Promise.allSettled([
-      fetch(USGS_URL).then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error(r.status)),
-      ),
-      fetch(EONET_URL).then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error(r.status)),
-      ),
-    ]);
-    if (disposed) return;
-    const [usgs, eonet] = results;
-    if (usgs.status === 'rejected' && eonet.status === 'rejected') {
-      // Keep whatever we already show; try again on the next tick.
+  async function setAurora(on) {
+    auroraOn = on;
+    if (!on) {
+      if (auroraLayer) auroraLayer.show = false;
+      render();
       return;
     }
+    try {
+      if (!auroraLayer) {
+        const points = auroraPoints(await getJson(AURORA_URL));
+        auroraLayer = viewer.scene.primitives.add(
+          new Cesium.PointPrimitiveCollection(),
+        );
+        for (const p of points) {
+          auroraLayer.add({
+            position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, 100_000),
+            pixelSize: 5,
+            color: Cesium.Color.fromHsl(
+              0.33 - Math.min(p.value, 80) / 400,
+              1,
+              0.5,
+              Math.min(0.85, 0.15 + p.value / 100),
+            ),
+          });
+        }
+      }
+      auroraLayer.show = true;
+    } catch {
+      auroraOn = false;
+    }
+    render();
+  }
+
+  async function refresh() {
+    const results = await Promise.allSettled([
+      getJson(USGS_URL),
+      getJson(EONET_URL),
+      getJson(GDACS_URL),
+      getJson(KP_URL),
+      getJson(FLARES_URL),
+    ]);
+    if (disposed) return;
+    const [usgs, eonet, gdacs, kp, flares] = results;
+    if (kp.status === 'fulfilled') space.kp = latestKp(kp.value);
+    if (flares.status === 'fulfilled') space.flares = parseFlares(flares.value);
+    if (results.slice(0, 3).every((r) => r.status === 'rejected')) {
+      // Keep whatever we already show; try again on the next tick.
+      render();
+      return;
+    }
+    const ok = (r, parse) => (r.status === 'fulfilled' ? parse(r.value) : []);
     alerts = mergeAlerts(
-      usgs.status === 'fulfilled' ? parseUsgs(usgs.value) : [],
-      eonet.status === 'fulfilled' ? parseEonet(eonet.value) : [],
+      ok(usgs, parseUsgs),
+      ok(eonet, parseEonet),
+      ok(gdacs, parseGdacs),
     );
     const hits = newWatchHits(alerts, store.list(), announced);
     // The first load only records what already exists, so reopening the app
@@ -282,6 +400,10 @@ export function mountAlertsPanel(
     tab = 'watch';
     render();
   };
+  tabSpace.onclick = () => {
+    tab = 'space';
+    render();
+  };
   addBtn.onclick = () => {
     const { lon, lat } = currentViewCenter();
     store.add({
@@ -303,6 +425,7 @@ export function mountAlertsPanel(
     clearInterval(timer);
     for (const id of pinIds) viewer.entities.removeById(id);
     viewer.entities.remove(pins);
+    if (auroraLayer) viewer.scene.primitives.remove(auroraLayer);
     panel.remove();
     style.remove();
   };

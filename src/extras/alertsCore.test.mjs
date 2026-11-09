@@ -118,3 +118,86 @@ test('watchlist store round-trips, clamps radius and drops corrupt data', () => 
   storage.setItem('atlas-eye.watchlist.v1', '{not json');
   assert.deepEqual(store.list(), []);
 });
+
+import {
+  auroraPoints,
+  flareStrength,
+  latestKp,
+  parseFlares,
+  parseGdacs,
+} from './alertsCore.js';
+
+test('parseGdacs keeps current point events and filters noisy green ones', () => {
+  const feature = (type, level, extra = {}) => ({
+    geometry: { type: 'Point', coordinates: [10, 20] },
+    properties: {
+      eventtype: type,
+      eventid: 1,
+      alertlevel: level,
+      name: `${type} event`,
+      datemodified: '2026-11-09T10:00:00',
+      iscurrent: 'true',
+      url: { report: 'https://r' },
+      ...extra,
+    },
+  });
+  const rows = parseGdacs({
+    features: [
+      feature('TC', 'Green'),
+      feature('WF', 'Green'),
+      feature('EQ', 'Green'),
+      feature('WF', 'Orange'),
+      feature('FL', 'Red', { iscurrent: 'false' }),
+      { geometry: { type: 'Polygon', coordinates: [] }, properties: {} },
+    ],
+  });
+  assert.deepEqual(
+    rows.map((r) => r.kind),
+    ['severeStorms', 'wildfires'],
+  );
+  assert.equal(rows[1].severity, 2);
+  assert.deepEqual(parseGdacs(undefined), []);
+});
+
+test('flareStrength orders classes and rejects junk', () => {
+  assert.ok(flareStrength('X1.0') > flareStrength('M9.9'));
+  assert.ok(flareStrength('M1.0') > flareStrength('C9.9'));
+  assert.equal(flareStrength('nope'), 0);
+});
+
+test('parseFlares returns newest first and respects the limit', () => {
+  const rows = parseFlares(
+    [
+      { max_class: 'C1.0', max_time: '2026-11-01T00:00:00Z' },
+      { max_class: 'M2.0', max_time: '2026-11-03T00:00:00Z' },
+      { max_class: 'B1.0', max_time: '2026-11-02T00:00:00Z' },
+      { max_class: null, max_time: '2026-11-04T00:00:00Z' },
+    ],
+    2,
+  );
+  assert.deepEqual(
+    rows.map((r) => r.cls),
+    ['M2.0', 'B1.0'],
+  );
+});
+
+test('latestKp reports the newest value and a storm level', () => {
+  const kp = latestKp([
+    { time_tag: '2026-11-09T00:00:00', Kp: 2 },
+    { time_tag: '2026-11-09T03:00:00', Kp: 6.33 },
+  ]);
+  assert.equal(kp.level, 'G2 moderate storm');
+  assert.equal(latestKp([]), null);
+});
+
+test('auroraPoints thresholds and wraps longitudes into -180..180', () => {
+  const pts = auroraPoints({
+    coordinates: [
+      [350, 70, 40],
+      [10, 60, 5],
+      [20, 65, 20],
+    ],
+  });
+  assert.equal(pts.length, 2);
+  assert.equal(pts[0].lon, -10);
+});

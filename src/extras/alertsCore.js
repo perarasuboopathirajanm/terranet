@@ -142,3 +142,111 @@ export function createWatchlistStore(storage) {
     },
   };
 }
+
+export const GDACS_URL =
+  'https://www.gdacs.org/gdacsapi/api/events/geteventlist/EVENTS4APP';
+export const FLARES_URL =
+  'https://services.swpc.noaa.gov/json/goes/primary/xray-flares-7-day.json';
+export const KP_URL =
+  'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json';
+export const AURORA_URL =
+  'https://services.swpc.noaa.gov/json/ovation_aurora_latest.json';
+
+const GDACS_KINDS = {
+  EQ: 'quake',
+  TC: 'severeStorms',
+  FL: 'floods',
+  VO: 'volcanoes',
+  WF: 'wildfires',
+  DR: 'drought',
+};
+// GDACS lists many low-level wildfires and small quakes that other feeds
+// already cover, so Green is kept only for the event types it is rare for.
+const GDACS_GREEN_KEPT = new Set(['TC', 'FL', 'VO']);
+
+/** Turn a GDACS GeoJSON event list into alert rows (current, point events only). */
+export function parseGdacs(payload) {
+  if (!payload || !Array.isArray(payload.features)) return [];
+  const rows = [];
+  for (const feature of payload.features) {
+    const [lon, lat] = feature?.geometry?.coordinates ?? [];
+    const p = feature?.properties ?? {};
+    if (feature?.geometry?.type !== 'Point') continue;
+    if (!finite(lon) || !finite(lat) || p.iscurrent === 'false') continue;
+    const level = p.alertlevel || 'Green';
+    if (level === 'Green' && !GDACS_GREEN_KEPT.has(p.eventtype)) continue;
+    const severity = level === 'Red' ? 3 : level === 'Orange' ? 2 : 1;
+    rows.push({
+      id: `gdacs:${p.eventtype}${p.eventid}`,
+      kind: GDACS_KINDS[p.eventtype] || 'event',
+      title: `${level.toUpperCase()}: ${p.name || p.description || 'Event'}`,
+      lon,
+      lat,
+      time: Date.parse(p.datemodified || p.fromdate) || 0,
+      severity,
+      url: typeof p.url?.report === 'string' ? p.url.report : null,
+    });
+  }
+  return rows;
+}
+
+/** Numeric strength of a GOES flare class such as "M2.5" (A, B, C, M, X). */
+export function flareStrength(cls) {
+  const match = /^([ABCMX])(\d+(?:\.\d+)?)$/.exec(String(cls ?? ''));
+  if (!match) return 0;
+  const base = { A: 1e-8, B: 1e-7, C: 1e-6, M: 1e-5, X: 1e-4 }[match[1]];
+  return base * Number(match[2]);
+}
+
+/** Recent flares, strongest class first within the newest `limit` events. */
+export function parseFlares(payload, limit = 12) {
+  if (!Array.isArray(payload)) return [];
+  return payload
+    .filter((f) => typeof f?.max_class === 'string' && f.max_time)
+    .map((f) => ({
+      id: `flare:${f.max_time}`,
+      cls: f.max_class,
+      strength: flareStrength(f.max_class),
+      time: Date.parse(f.max_time) || 0,
+    }))
+    .sort((a, b) => b.time - a.time)
+    .slice(0, limit);
+}
+
+/** Latest planetary Kp value and a plain-language storm level. */
+export function latestKp(payload) {
+  if (!Array.isArray(payload)) return null;
+  const rows = payload.filter((r) => finite(Number(r?.Kp)) && r.time_tag);
+  const last = rows[rows.length - 1];
+  if (!last) return null;
+  const kp = Number(last.Kp);
+  const level =
+    kp >= 9
+      ? 'G5 extreme storm'
+      : kp >= 8
+        ? 'G4 severe storm'
+        : kp >= 7
+          ? 'G3 strong storm'
+          : kp >= 6
+            ? 'G2 moderate storm'
+            : kp >= 5
+              ? 'G1 minor storm'
+              : kp >= 4
+                ? 'Active'
+                : 'Quiet';
+  return { kp, level, time: Date.parse(`${last.time_tag}Z`) || 0 };
+}
+
+/** Aurora probability grid points at or above `minValue` percent. */
+export function auroraPoints(payload, minValue = 15) {
+  const coords = payload?.coordinates;
+  if (!Array.isArray(coords)) return [];
+  const out = [];
+  for (const row of coords) {
+    const [lon, lat, value] = row;
+    if (finite(lon) && finite(lat) && finite(value) && value >= minValue) {
+      out.push({ lon: lon > 180 ? lon - 360 : lon, lat, value });
+    }
+  }
+  return out;
+}
