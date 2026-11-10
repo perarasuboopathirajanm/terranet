@@ -18,8 +18,14 @@ application
   .then((components) => {
     // Atlas Eye extras: live alerts feed and a watchlist over the running globe.
     // A failure here must not take down the globe, so it is handled separately.
-    import('./extras/alertsPanel.js')
-      .then(({ mountAlertsPanel }) => mountAlertsPanel(components.scene.viewer))
+    Promise.all([
+      import('./extras/alertsPanel.js'),
+      import('./extras/explorePanel.js'),
+    ])
+      .then(([{ mountAlertsPanel }, { createExploreTab }]) => {
+        const { viewer } = components.scene;
+        mountAlertsPanel(viewer, { extraTabs: [createExploreTab(viewer)] });
+      })
       .catch((error) => console.error('Atlas Eye extras failed:', error));
   })
   .catch((error) => {

@@ -19,6 +19,7 @@ import {
   parseUsgs,
 } from './alertsCore.js';
 import { compassLabel, skyNow } from './skyCore.js';
+import { STYLE, skeletonRows } from './theme.js';
 
 const getJson = (url) =>
   fetch(url).then((r) =>
@@ -26,43 +27,6 @@ const getJson = (url) =>
   );
 
 const REFRESH_MS = 5 * 60 * 1000;
-
-const STYLE = `
-.atlas-panel{position:fixed;left:16px;bottom:16px;width:320px;max-height:55vh;display:flex;flex-direction:column;z-index:40;
-  background:rgba(10,12,18,.88);color:#e6e8eb;border:1px solid rgba(120,160,255,.28);border-radius:10px;
-  font:12px/1.4 'JetBrains Mono',ui-monospace,monospace;backdrop-filter:blur(8px)}
-.atlas-panel.collapsed .atlas-body{display:none}
-.atlas-head{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;user-select:none}
-.atlas-head b{flex:1;letter-spacing:.08em}
-.atlas-badge{background:#c0392b;color:#fff;border-radius:9px;padding:0 6px;font-size:11px}
-.atlas-badge.zero{display:none}
-.atlas-tabs{display:flex;border-top:1px solid rgba(255,255,255,.08)}
-.atlas-tabs button{flex:1;background:none;border:0;color:#8b93a1;padding:6px;cursor:pointer;font:inherit}
-.atlas-tabs button.on{color:#8fb0ff;box-shadow:inset 0 -2px #8fb0ff}
-.atlas-list{overflow-y:auto;padding:4px 0;min-height:60px}
-.atlas-row{display:flex;gap:8px;padding:6px 10px;cursor:pointer;align-items:flex-start}
-.atlas-row:hover{background:rgba(255,255,255,.06)}
-.atlas-row.hit{border-left:3px solid #e74c3c;padding-left:7px}
-.atlas-dot{width:9px;height:9px;border-radius:50%;margin-top:4px;flex:none}
-.atlas-sub{color:#8b93a1;font-size:11px}
-.atlas-row button{margin-left:auto;background:none;border:0;color:#8b93a1;cursor:pointer}
-.atlas-form{display:grid;grid-template-columns:1fr 70px;gap:6px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.08)}
-.atlas-form input,.atlas-form button{background:#101216;color:inherit;border:1px solid #2d333d;border-radius:5px;padding:5px 6px;font:inherit}
-.atlas-form button{grid-column:1 / -1;background:#3b6df0;border-color:#3b6df0;cursor:pointer}
-.atlas-empty{padding:10px;color:#8b93a1}
-.atlas-banner{padding:6px 10px;background:rgba(231,76,60,.18);color:#f5b7b1;font-size:11px}
-@media (max-width:640px){
-  .atlas-panel{left:8px;right:8px;bottom:8px;width:auto;max-height:62vh;font-size:14px;border-radius:14px;
-    padding-bottom:env(safe-area-inset-bottom)}
-  .atlas-head{padding:12px 14px}
-  .atlas-tabs button{padding:12px 6px}
-  .atlas-row{padding:12px 14px}
-  .atlas-row button{padding:8px 12px}
-  .atlas-sub{font-size:12px}
-  .atlas-form{grid-template-columns:1fr 80px;padding:10px 14px}
-  .atlas-form input,.atlas-form button{padding:10px;font-size:16px}
-}
-`;
 
 const KIND_COLOR = {
   quake: '#f1c40f',
@@ -93,7 +57,7 @@ function el(tag, props = {}, children = []) {
  */
 export function mountAlertsPanel(
   viewer,
-  { storage = globalThis.localStorage } = {},
+  { storage = globalThis.localStorage, extraTabs = [] } = {},
 ) {
   const store = createWatchlistStore(storage);
   const cache = createFeedCache(storage);
@@ -104,6 +68,7 @@ export function mountAlertsPanel(
   const pinIds = [];
   let alerts = [];
   let space = { kp: null, flares: [], planets: [], totalPlanets: null };
+  let settled = false; // true once the first refresh has finished
   let auroraOn = false;
   let auroraLayer = null;
   let tab = 'alerts';
@@ -121,10 +86,19 @@ export function mountAlertsPanel(
   const tabAlerts = el('button', { textContent: 'Alerts', className: 'on' });
   const tabWatch = el('button', { textContent: 'Watchlist' });
   const tabSpace = el('button', { textContent: 'Space' });
+  const extraButtons = extraTabs.map((t) => {
+    const button = el('button', { textContent: t.label });
+    button.onclick = () => {
+      tab = t.id;
+      render();
+    };
+    return button;
+  });
   const tabs = el('div', { className: 'atlas-tabs' }, [
     tabAlerts,
     tabWatch,
     tabSpace,
+    ...extraButtons,
   ]);
   const list = el('div', { className: 'atlas-list' });
   const nameInput = el('input', { placeholder: 'Name (uses current view)' });
@@ -204,6 +178,9 @@ export function mountAlertsPanel(
     tabAlerts.classList.toggle('on', tab === 'alerts');
     tabWatch.classList.toggle('on', tab === 'watch');
     tabSpace.classList.toggle('on', tab === 'space');
+    extraTabs.forEach((t, i) =>
+      extraButtons[i].classList.toggle('on', tab === t.id),
+    );
     form.style.display = tab === 'watch' ? '' : 'none';
     list.replaceChildren();
 
@@ -214,6 +191,17 @@ export function mountAlertsPanel(
           textContent: `Offline: showing data saved ${timeAgo(staleSince)}.`,
         }),
       );
+    }
+
+    const extra = extraTabs.find((t) => t.id === tab);
+    if (extra) {
+      extra.render(list, {
+        el,
+        flyTo,
+        getSpace: () => space,
+        rerender: render,
+      });
+      return;
     }
 
     if (tab === 'space') {
@@ -301,7 +289,9 @@ export function mountAlertsPanel(
             : 'Newest exoplanets',
         }),
       );
-      if (!space.planets.length)
+      if (!space.planets.length && !settled)
+        list.append(...skeletonRows(el, 3));
+      else if (!space.planets.length)
         list.append(
           el('div', {
             className: 'atlas-empty',
@@ -336,13 +326,7 @@ export function mountAlertsPanel(
     }
 
     if (tab === 'alerts') {
-      if (!alerts.length)
-        list.append(
-          el('div', {
-            className: 'atlas-empty',
-            textContent: 'Loading alerts…',
-          }),
-        );
+      if (!alerts.length) list.append(...skeletonRows(el, 6));
       for (const a of alerts) {
         const place = matchWatch(a, watch);
         const row = el(
@@ -454,6 +438,7 @@ export function mountAlertsPanel(
       getJson('/api/exoplanets'),
     ]);
     if (disposed) return;
+    settled = true;
     const [usgs, eonet, gdacs, kp, flares, planets] = results;
     if (kp.status === 'fulfilled') space.kp = latestKp(kp.value);
     if (flares.status === 'fulfilled') space.flares = parseFlares(flares.value);

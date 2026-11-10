@@ -6,7 +6,7 @@ import { readResponseTextCapped } from './common/http.js';
 const TAP_URL = 'https://exoplanetarchive.ipac.caltech.edu/TAP/sync';
 const LIST_QUERY =
   'select top 20 pl_name,hostname,disc_year,pl_rade,pl_masse,pl_eqt,sy_dist,' +
-  'discoverymethod,disc_facility,releasedate from ps where default_flag=1 ' +
+  'discoverymethod,disc_facility,releasedate,ra,dec from ps where default_flag=1 ' +
   'order by disc_year desc, releasedate desc';
 const COUNT_QUERY = 'select count(*) as n from pscomppars';
 const FRESH_MS = 60 * 60_000;
@@ -38,6 +38,8 @@ export function normalizePlanets(rows) {
       method: text(row.discoverymethod, 60),
       facility: text(row.disc_facility, 120),
       released: text(row.releasedate, 10),
+      raDeg: num(row.ra),
+      decDeg: num(row.dec),
     });
   }
   return planets;
