@@ -1,3 +1,5 @@
+> **Terranet** is a fork of [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) by Bilawal Sidhu (MIT). It adds an alerts feed, watchlist, space-weather and sky tabs, an exoplanet feed, an Explore tab and a new look. See [FORK_NOTES.md](FORK_NOTES.md). The rest of this README is the original project's.
+
 <div align="center">
 
 # 🌐 God's Eye View
