@@ -250,3 +250,54 @@ export function auroraPoints(payload, minValue = 15) {
   }
   return out;
 }
+
+const CACHE_KEY = 'atlas-eye.cache.v1';
+const CACHE_MAX_ALERTS = 200;
+
+const validAlert = (a) =>
+  a &&
+  typeof a.id === 'string' &&
+  typeof a.title === 'string' &&
+  typeof a.kind === 'string' &&
+  finite(a.lon) &&
+  finite(a.lat) &&
+  finite(a.time);
+
+/** Last good alerts and space data, kept so the panel is not empty offline. */
+export function createFeedCache(storage, now = () => Date.now()) {
+  return {
+    save({ alerts, space }) {
+      try {
+        storage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            savedAt: now(),
+            alerts: alerts.slice(0, CACHE_MAX_ALERTS),
+            space,
+          }),
+        );
+      } catch {
+        // Storage can be full or blocked; the live data still works.
+      }
+    },
+    load() {
+      try {
+        const raw = JSON.parse(storage.getItem(CACHE_KEY) ?? 'null');
+        if (!raw || !finite(raw.savedAt) || !Array.isArray(raw.alerts)) {
+          return null;
+        }
+        const space = raw.space ?? {};
+        return {
+          savedAt: raw.savedAt,
+          alerts: raw.alerts.filter(validAlert),
+          space: {
+            kp: space.kp ?? null,
+            flares: Array.isArray(space.flares) ? space.flares : [],
+          },
+        };
+      } catch {
+        return null;
+      }
+    },
+  };
+}

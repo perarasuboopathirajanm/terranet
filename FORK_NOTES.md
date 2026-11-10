@@ -24,4 +24,11 @@ Open http://localhost:4173.
 - GDACS global disaster alerts (Orange/Red events, plus Green cyclones, floods and volcanoes) join the Alerts feed.
 - **Space** tab: NOAA SWPC planetary Kp index with storm level, recent solar flares (M/X class highlighted), and a toggleable aurora probability overlay on the globe.
 
+## Added after that
+
+- **Phone layout:** under 640 px wide the panel becomes a full-width bottom sheet with larger tap targets.
+- **Offline cache:** the last good alerts, Kp and flares are saved in `localStorage` and shown immediately on load. If every live feed fails, an "Offline: showing data saved ... ago" banner appears, and it clears when a feed works again.
+- **Sky above your view** (Space tab): live Sun, Moon (with lit percentage), Mercury to Neptune: altitude and compass direction for the point under the screen centre, computed in the browser with `astronomy-engine`. Refreshes every minute.
+
 Not added: ocean buoys (NDBC) and airport weather (METAR). Their servers do not allow direct browser requests, so they would need a small proxy on the dev server.
+Also not added: live new-exoplanet discoveries. The NASA Exoplanet Archive does not allow direct browser requests, so it would also need a server proxy.

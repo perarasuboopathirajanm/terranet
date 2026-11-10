@@ -201,3 +201,42 @@ test('auroraPoints thresholds and wraps longitudes into -180..180', () => {
   assert.equal(pts.length, 2);
   assert.equal(pts[0].lon, -10);
 });
+
+import { createFeedCache } from './alertsCore.js';
+
+test('feed cache round-trips and drops malformed alerts', () => {
+  const storage = memoryStorage();
+  const cache = createFeedCache(storage, () => 1234);
+  assert.equal(cache.load(), null);
+  cache.save({
+    alerts: [
+      { id: 'a', title: 'A', kind: 'quake', lon: 1, lat: 2, time: 3 },
+      { id: 'bad', title: 'Bad', kind: 'quake', lon: 'x', lat: 2, time: 3 },
+    ],
+    space: { kp: { kp: 2, level: 'Quiet', time: 5 }, flares: [] },
+  });
+  const loaded = cache.load();
+  assert.equal(loaded.savedAt, 1234);
+  assert.deepEqual(
+    loaded.alerts.map((a) => a.id),
+    ['a'],
+  );
+  assert.equal(loaded.space.kp.level, 'Quiet');
+});
+
+test('feed cache survives corrupt storage and caps stored alerts', () => {
+  const storage = memoryStorage();
+  const cache = createFeedCache(storage);
+  storage.setItem('atlas-eye.cache.v1', '{broken');
+  assert.equal(cache.load(), null);
+  const many = Array.from({ length: 500 }, (_, i) => ({
+    id: String(i),
+    title: 't',
+    kind: 'quake',
+    lon: 0,
+    lat: 0,
+    time: i,
+  }));
+  cache.save({ alerts: many, space: { kp: null, flares: [] } });
+  assert.equal(cache.load().alerts.length, 200);
+});

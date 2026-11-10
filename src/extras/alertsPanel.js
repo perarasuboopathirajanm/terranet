@@ -7,6 +7,7 @@ import {
   KP_URL,
   USGS_URL,
   auroraPoints,
+  createFeedCache,
   createWatchlistStore,
   latestKp,
   matchWatch,
@@ -17,6 +18,7 @@ import {
   parseGdacs,
   parseUsgs,
 } from './alertsCore.js';
+import { compassLabel, skyNow } from './skyCore.js';
 
 const getJson = (url) =>
   fetch(url).then((r) =>
@@ -48,6 +50,18 @@ const STYLE = `
 .atlas-form input,.atlas-form button{background:#101216;color:inherit;border:1px solid #2d333d;border-radius:5px;padding:5px 6px;font:inherit}
 .atlas-form button{grid-column:1 / -1;background:#3b6df0;border-color:#3b6df0;cursor:pointer}
 .atlas-empty{padding:10px;color:#8b93a1}
+.atlas-banner{padding:6px 10px;background:rgba(231,76,60,.18);color:#f5b7b1;font-size:11px}
+@media (max-width:640px){
+  .atlas-panel{left:8px;right:8px;bottom:8px;width:auto;max-height:62vh;font-size:14px;border-radius:14px;
+    padding-bottom:env(safe-area-inset-bottom)}
+  .atlas-head{padding:12px 14px}
+  .atlas-tabs button{padding:12px 6px}
+  .atlas-row{padding:12px 14px}
+  .atlas-row button{padding:8px 12px}
+  .atlas-sub{font-size:12px}
+  .atlas-form{grid-template-columns:1fr 80px;padding:10px 14px}
+  .atlas-form input,.atlas-form button{padding:10px;font-size:16px}
+}
 `;
 
 const KIND_COLOR = {
@@ -82,7 +96,10 @@ export function mountAlertsPanel(
   { storage = globalThis.localStorage } = {},
 ) {
   const store = createWatchlistStore(storage);
+  const cache = createFeedCache(storage);
   const announced = new Set();
+  // Set while the panel shows saved data because every live feed failed.
+  let staleSince = null;
   const pins = viewer.entities.add(new Cesium.Entity({ id: 'atlas-alerts' }));
   const pinIds = [];
   let alerts = [];
@@ -134,13 +151,20 @@ export function mountAlertsPanel(
     });
 
   function currentViewCenter() {
-    const rect = viewer.camera.computeViewRectangle();
-    if (rect) {
+    // The point on the globe under the middle of the screen.
+    const canvas = viewer.scene.canvas;
+    const hit = viewer.camera.pickEllipsoid(
+      new Cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2),
+      viewer.scene.globe.ellipsoid,
+    );
+    if (hit) {
+      const point = Cesium.Cartographic.fromCartesian(hit);
       return {
-        lon: Cesium.Math.toDegrees(Cesium.Rectangle.center(rect).longitude),
-        lat: Cesium.Math.toDegrees(Cesium.Rectangle.center(rect).latitude),
+        lon: Cesium.Math.toDegrees(point.longitude),
+        lat: Cesium.Math.toDegrees(point.latitude),
       };
     }
+    // Looking at the sky or space: use the spot beneath the camera.
     const carto = viewer.camera.positionCartographic;
     return {
       lon: Cesium.Math.toDegrees(carto.longitude),
@@ -183,6 +207,15 @@ export function mountAlertsPanel(
     form.style.display = tab === 'watch' ? '' : 'none';
     list.replaceChildren();
 
+    if (staleSince !== null && tab !== 'watch') {
+      list.append(
+        el('div', {
+          className: 'atlas-banner',
+          textContent: `Offline: showing data saved ${timeAgo(staleSince)}.`,
+        }),
+      );
+    }
+
     if (tab === 'space') {
       const kp = space.kp;
       list.append(
@@ -205,6 +238,31 @@ export function mountAlertsPanel(
       });
       toggle.onclick = () => setAurora(!auroraOn);
       list.append(el('div', { className: 'atlas-form' }, [toggle]));
+      const here = currentViewCenter();
+      list.append(
+        el('div', {
+          className: 'atlas-sub',
+          textContent: `Sky above ${here.lat.toFixed(1)}, ${here.lon.toFixed(1)} (globe centre)`,
+        }),
+      );
+      for (const b of skyNow(here)) {
+        const detail = b.up
+          ? `${Math.round(b.altitude)}° up, ${compassLabel(b.azimuth)}`
+          : 'below the horizon';
+        const moon =
+          b.litFraction === undefined
+            ? ''
+            : ` · ${Math.round(b.litFraction * 100)}% lit`;
+        const row = el('div', { className: 'atlas-row' }, [
+          el('span', { className: 'atlas-dot' }),
+          el('div', {}, [
+            el('div', { textContent: b.name }),
+            el('div', { className: 'atlas-sub', textContent: detail + moon }),
+          ]),
+        ]);
+        row.firstChild.style.background = b.up ? '#f1c40f' : '#3d4452';
+        list.append(row);
+      }
       list.append(
         el('div', {
           className: 'atlas-sub',
@@ -359,10 +417,12 @@ export function mountAlertsPanel(
     if (kp.status === 'fulfilled') space.kp = latestKp(kp.value);
     if (flares.status === 'fulfilled') space.flares = parseFlares(flares.value);
     if (results.slice(0, 3).every((r) => r.status === 'rejected')) {
-      // Keep whatever we already show; try again on the next tick.
+      // Keep whatever we already show (live or saved); try again on the next tick.
+      if (alerts.length && staleSince === null) staleSince = lastGoodAt;
       render();
       return;
     }
+    staleSince = null;
     const ok = (r, parse) => (r.status === 'fulfilled' ? parse(r.value) : []);
     alerts = mergeAlerts(
       ok(usgs, parseUsgs),
@@ -375,6 +435,8 @@ export function mountAlertsPanel(
     if (firstLoad) hits.forEach(({ alert }) => announced.add(alert.id));
     else notify(hits);
     firstLoad = false;
+    lastGoodAt = Date.now();
+    cache.save({ alerts, space });
     redrawPins();
     render();
   }
@@ -416,13 +478,32 @@ export function mountAlertsPanel(
     render();
   };
 
+  // Show the last saved data straight away; the first refresh replaces it.
+  let lastGoodAt = Date.now();
+  const saved = cache.load();
+  if (saved?.alerts.length) {
+    alerts = saved.alerts;
+    space = saved.space;
+    lastGoodAt = saved.savedAt;
+    alerts.forEach((a) => announced.add(a.id));
+    redrawPins();
+  }
+
   render();
   refresh();
   timer = setInterval(refresh, REFRESH_MS);
+  // Planets move, so keep the Space tab current while it is open.
+  const skyTimer = setInterval(() => {
+    if (tab === 'space' && !panel.classList.contains('collapsed')) render();
+  }, 60_000);
+  const onOnline = () => refresh();
+  globalThis.addEventListener?.('online', onOnline);
 
   return () => {
     disposed = true;
     clearInterval(timer);
+    clearInterval(skyTimer);
+    globalThis.removeEventListener?.('online', onOnline);
     for (const id of pinIds) viewer.entities.removeById(id);
     viewer.entities.remove(pins);
     if (auroraLayer) viewer.scene.primitives.remove(auroraLayer);
