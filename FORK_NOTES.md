@@ -1,10 +1,10 @@
-# 領域展開 (fork notes)
+# Meridian SkyNet (fork notes)
 
 This is a fork of [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) by Bilawal Sidhu, used under the MIT License (see `LICENSE`, unchanged).
 
 ## What changed
 
-- Renamed to 領域展開: page title, loading screen, top bar, web manifest.
+- Renamed to Meridian SkyNet: page title, loading screen, top bar, web manifest.
 - New **ALERTS** panel (bottom-left), in `src/extras/`:
   - Live feed of USGS earthquakes (M4.5+, last day) and open NASA EONET events (wildfires, storms, volcanoes, floods), refreshed every 5 minutes. Pins are drawn on the globe; clicking a row flies there.
   - **Watchlist**: save the current view as a named place with a radius in km. Events inside a radius are highlighted, counted in the badge, and sent as browser notifications.
