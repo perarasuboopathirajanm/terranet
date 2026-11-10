@@ -293,6 +293,10 @@ export function createFeedCache(storage, now = () => Date.now()) {
           space: {
             kp: space.kp ?? null,
             flares: Array.isArray(space.flares) ? space.flares : [],
+            planets: Array.isArray(space.planets) ? space.planets : [],
+            totalPlanets: finite(space.totalPlanets)
+              ? space.totalPlanets
+              : null,
           },
         };
       } catch {

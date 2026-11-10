@@ -240,3 +240,25 @@ test('feed cache survives corrupt storage and caps stored alerts', () => {
   cache.save({ alerts: many, space: { kp: null, flares: [] } });
   assert.equal(cache.load().alerts.length, 200);
 });
+
+test('feed cache keeps exoplanet data and defaults it when absent', () => {
+  const storage = memoryStorage();
+  const cache = createFeedCache(storage);
+  cache.save({
+    alerts: [],
+    space: {
+      kp: null,
+      flares: [],
+      planets: [{ name: 'TOI-1 b' }],
+      totalPlanets: 6000,
+    },
+  });
+  const loaded = cache.load();
+  assert.equal(loaded.space.planets[0].name, 'TOI-1 b');
+  assert.equal(loaded.space.totalPlanets, 6000);
+  storage.setItem(
+    'atlas-eye.cache.v1',
+    JSON.stringify({ savedAt: 1, alerts: [], space: { kp: null, flares: [] } }),
+  );
+  assert.deepEqual(cache.load().space.planets, []);
+});

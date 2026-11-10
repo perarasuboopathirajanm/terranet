@@ -103,7 +103,7 @@ export function mountAlertsPanel(
   const pins = viewer.entities.add(new Cesium.Entity({ id: 'atlas-alerts' }));
   const pinIds = [];
   let alerts = [];
-  let space = { kp: null, flares: [] };
+  let space = { kp: null, flares: [], planets: [], totalPlanets: null };
   let auroraOn = false;
   let auroraLayer = null;
   let tab = 'alerts';
@@ -293,6 +293,45 @@ export function mountAlertsPanel(
         );
         list.append(row);
       }
+      list.append(
+        el('div', {
+          className: 'atlas-sub',
+          textContent: space.totalPlanets
+            ? `Newest exoplanets (${space.totalPlanets.toLocaleString()} confirmed)`
+            : 'Newest exoplanets',
+        }),
+      );
+      if (!space.planets.length)
+        list.append(
+          el('div', {
+            className: 'atlas-empty',
+            textContent:
+              'Exoplanet feed unavailable. It needs the local server (npm run dev).',
+          }),
+        );
+      for (const p of space.planets) {
+        const facts = [
+          p.radiusEarth ? `${p.radiusEarth.toFixed(1)}× Earth wide` : null,
+          p.tempK ? `${Math.round(p.tempK)} K` : null,
+          p.distanceLy
+            ? `${Math.round(p.distanceLy).toLocaleString()} ly away`
+            : null,
+          p.method,
+        ].filter(Boolean);
+        list.append(
+          el('div', { className: 'atlas-row' }, [
+            el('div', {}, [
+              el('div', {
+                textContent: `${p.name}${p.discoveredYear ? ` (${p.discoveredYear})` : ''}`,
+              }),
+              el('div', {
+                className: 'atlas-sub',
+                textContent: facts.join(' · ') || 'No measurements yet',
+              }),
+            ]),
+          ]),
+        );
+      }
       return;
     }
 
@@ -411,11 +450,20 @@ export function mountAlertsPanel(
       getJson(GDACS_URL),
       getJson(KP_URL),
       getJson(FLARES_URL),
+      // Served by this app's own server; absent when the page is hosted statically.
+      getJson('/api/exoplanets'),
     ]);
     if (disposed) return;
-    const [usgs, eonet, gdacs, kp, flares] = results;
+    const [usgs, eonet, gdacs, kp, flares, planets] = results;
     if (kp.status === 'fulfilled') space.kp = latestKp(kp.value);
     if (flares.status === 'fulfilled') space.flares = parseFlares(flares.value);
+    if (
+      planets.status === 'fulfilled' &&
+      Array.isArray(planets.value?.planets)
+    ) {
+      space.planets = planets.value.planets;
+      space.totalPlanets = planets.value.totalConfirmed ?? null;
+    }
     if (results.slice(0, 3).every((r) => r.status === 'rejected')) {
       // Keep whatever we already show (live or saved); try again on the next tick.
       if (alerts.length && staleSince === null) staleSince = lastGoodAt;

@@ -32,6 +32,7 @@ import { droneAirspaceProxy } from './droneAirspace.js';
 import { inaturalistProxy } from './inaturalist/observations.js';
 import { acartiaProxy } from './acartia.js';
 import { cycloneProxy } from './cyclones.js';
+import { exoplanetProxy } from './exoplanets.js';
 import { windProxy } from './wind.js';
 
 /**
@@ -78,6 +79,7 @@ function localProviderPlugins({
     windProxy(),
     weatherProxy(),
     cycloneProxy(),
+    exoplanetProxy(),
     mapillaryProxy(),
     firePerimetersProxy(),
     gnssIntegrityProxy(),
