@@ -4,10 +4,15 @@ import * as Cesium from 'cesium';
 export const ESRI_ATTRIBUTION_HTML =
   '<a href="https://www.esri.com" target="_blank" rel="noopener">Powered by Esri</a>';
 
+// The street map is CARTO Voyager (OpenStreetMap data): clean roads, place
+// names and parks in a Google-Maps-like style. Free, no key.
 export function createOsmImagery() {
-  return new Cesium.OpenStreetMapImageryProvider({
-    url: 'https://tile.openstreetmap.org/',
-    credit: '© OpenStreetMap contributors',
+  return new Cesium.UrlTemplateImageryProvider({
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    subdomains: ['a', 'b', 'c', 'd'],
+    maximumLevel: 19,
+    credit:
+      '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
   });
 }
 

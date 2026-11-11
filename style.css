@@ -44,11 +44,12 @@
 @import './src/ui/styles/annotations.css';
 @import './src/ui/styles/ai-chat.css';
 @import './src/ui/styles/cyber.css';
+@import './src/ui/styles/terranet.css';
 
 /* Terranet: skeleton bars under the loading status. */
 .loader-skeleton{display:grid;gap:10px;width:min(280px,70vw);margin:22px auto 0}
 .loader-skeleton i{display:block;height:14px;border-radius:10px;
-  background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(110,243,214,.28) 50%,rgba(255,255,255,.05) 70%);
+  background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(0,255,102,.28) 50%,rgba(255,255,255,.05) 70%);
   background-size:220% 100%;animation:loader-shimmer 1.4s ease-in-out infinite;
   box-shadow:inset 2px 2px 5px rgba(0,0,0,.45)}
 .loader-skeleton i:nth-child(2){width:80%}

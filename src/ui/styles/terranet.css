@@ -1,0 +1,193 @@
+/* Terranet look: matrix-green cyber glass with soft, raised ("neumorphic") controls.
+   Loaded last, so it re-skins the shared tokens and the main panels. */
+:root {
+  --bg-dark: #020804;
+  --accent: #00ff66;
+  --accent-dim: rgba(0, 255, 102, 0.14);
+  --accent-glow: rgba(0, 255, 102, 0.42);
+  --glass-bg: rgba(14, 24, 34, 0.58);
+  --glass-border: rgba(0, 255, 102, 0.2);
+  --glass-border-hover: rgba(157, 255, 107, 0.45);
+  --scroll-thumb: rgba(0, 255, 102, 0.4);
+  --menu-bg: #06140b;
+  --text-primary: #c8ffd9;
+  --text-secondary: rgba(160, 230, 185, 0.65);
+  --panel-radius: 22px;
+  --btn-radius: 14px;
+  --dock-label-color: rgba(157, 255, 107, 0.9);
+  --tn-raise:
+    6px 8px 18px rgba(0, 0, 0, 0.5), -4px -4px 12px rgba(0, 255, 102, 0.05);
+  --tn-press:
+    inset 3px 3px 8px rgba(0, 0, 0, 0.6),
+    inset -2px -2px 6px rgba(0, 255, 102, 0.07);
+}
+
+/* Glass panels */
+#left-panel-stack > [data-panel-id],
+#right-context-rail > [data-panel-id],
+#command-dock,
+#utilities-panel,
+#global-context-panel,
+#space-mission-panel,
+#param-slider-panel {
+  background: linear-gradient(
+    145deg,
+    rgba(8, 26, 14, 0.58),
+    rgba(2, 10, 6, 0.74)
+  );
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(0, 255, 102, 0.22);
+  border-radius: var(--panel-radius);
+  box-shadow:
+    10px 14px 30px rgba(0, 0, 0, 0.5),
+    -6px -6px 20px rgba(0, 255, 102, 0.05),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+/* Raised buttons; pressed or active ones sink in. */
+#left-panel-stack button,
+#right-context-rail button,
+#command-dock button,
+#utilities-panel button,
+#global-context-panel button,
+#space-mission-panel button {
+  border-radius: var(--btn-radius);
+  background: linear-gradient(
+    145deg,
+    rgba(14, 38, 22, 0.9),
+    rgba(4, 16, 9, 0.9)
+  );
+  border: 0;
+  box-shadow: var(--tn-raise);
+  transition:
+    box-shadow 0.15s,
+    color 0.15s;
+}
+:is(
+    #left-panel-stack,
+    #right-context-rail,
+    #command-dock,
+    #utilities-panel,
+    #global-context-panel,
+    #space-mission-panel
+  )
+  button:is(
+    .active,
+    .on,
+    [aria-pressed='true'],
+    [aria-checked='true'],
+    [aria-selected='true']
+  ) {
+  color: var(--accent);
+  background: linear-gradient(
+    145deg,
+    rgba(3, 12, 7, 0.95),
+    rgba(10, 30, 18, 0.9)
+  );
+  box-shadow: var(--tn-press);
+}
+
+/* Title and labels in the Terranet gradient */
+.title-accent {
+  color: var(--accent);
+}
+#loading-screen {
+  background: radial-gradient(ellipse at 50% 40%, #06200f 0%, #010503 70%);
+}
+
+/* Dialogs (first-run, settings) */
+.first-run-dialog,
+[role='dialog'] {
+  background: linear-gradient(
+    145deg,
+    rgba(8, 26, 14, 0.82),
+    rgba(2, 10, 6, 0.92)
+  );
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(0, 255, 102, 0.26);
+  border-radius: 24px;
+  box-shadow:
+    14px 20px 44px rgba(0, 0, 0, 0.6),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  #left-panel-stack > [data-panel-id],
+  #right-context-rail > [data-panel-id],
+  #command-dock,
+  [role='dialog'] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: #06140b;
+  }
+}
+
+/* No overlay on the map: the picture is shown as the satellites took it. */
+
+/* Required data credits: kept visible, shown as a small glass pill. */
+#cesium-credits {
+  /* Pinned to the very bottom-left corner so it never sits on a panel. */
+  position: fixed !important;
+  left: 16px !important;
+  bottom: 8px !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 45;
+  max-width: calc(100vw - 32px);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 9px;
+  background: rgba(2, 10, 6, 0.6);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 255, 102, 0.22);
+  box-shadow: 3px 4px 10px rgba(0, 0, 0, 0.45);
+  color: rgba(160, 230, 185, 0.8);
+}
+#cesium-credits .cesium-credit-logoContainer img {
+  height: 16px !important;
+  width: auto !important;
+}
+#cesium-credits a,
+#cesium-credits .cesium-credit-expand-link {
+  color: rgba(160, 255, 190, 0.9);
+}
+
+/* Cleaner screen: hide the original's decorative sensor readouts and tagline.
+   The live clock, position and altitude stay. */
+#intel-hud .hud-classification,
+#intel-hud .hud-system,
+#intel-hud .hud-summary-wrap,
+#intel-hud .hud-orbital,
+#intel-hud #hud-mgrs,
+#intel-hud #hud-gsd,
+#intel-hud .hud-edge,
+#intel-hud .hud-bracket,
+#intel-hud .hud-sonar,
+.subtitle.scene-text-holdout {
+  display: none !important;
+}
+
+/* Smaller header: the title and the round action buttons take less of the
+   screen, so the globe has more room. */
+#title-bar {
+  top: 14px;
+  inset-inline-start: 18px;
+}
+#title-bar h1 {
+  font-size: 15px;
+  letter-spacing: 4px;
+  gap: 8px;
+}
+#title-bar .title-logo {
+  width: 28px;
+}
+#title-bar .title-glow {
+  width: 120px;
+  height: 50px;
+}
+#top-center-actions {
+  zoom: 0.72;
+}

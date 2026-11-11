@@ -1,0 +1,55 @@
+{
+	"name": "terranet",
+	"main": "cloudflare/worker.js",
+	"compatibility_date": "2026-01-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"kv_namespaces": [
+		{
+			"binding": "CACHE",
+			"id": "424d4ae3449a49d48476c5d9f6deb851"
+		}
+	],
+	"triggers": {
+		"crons": [
+			"0 */6 * * *"
+		]
+	},
+	"vars": {
+		"OVERPASS_UPSTREAMS": "https://maps.mail.ru/osm/tools/overpass/api/interpreter,https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter",
+		"CCTV_MAX_SOURCES": "12000",
+		"CCTV_AUSTIN_MAX_SOURCES": "1500",
+		"CCTV_CALGARY_MAX_SOURCES": "1500",
+		"CCTV_CALTRANS_MAX_SOURCES": "1500",
+		"CCTV_CATALONIA_MAX_SOURCES": "1500",
+		"CCTV_DELDOT_MAX_SOURCES": "1500",
+		"CCTV_DRIVEBC_MAX_SOURCES": "1500",
+		"CCTV_FINTRAFFIC_MAX_SOURCES": "1500",
+		"CCTV_FLORIDA_MAX_SOURCES": "1500",
+		"CCTV_HK_MAX_SOURCES": "1500",
+		"CCTV_HOUSTON_MAX_SOURCES": "1500",
+		"CCTV_ICELAND_MAX_SOURCES": "1500",
+		"CCTV_KINGCOUNTY_MAX_SOURCES": "1500",
+		"CCTV_LITHUANIA_MAX_SOURCES": "1500",
+		"CCTV_NSW_MAX_SOURCES": "1500",
+		"CCTV_NYC_MAX_SOURCES": "1500",
+		"CCTV_OTTAWA_MAX_SOURCES": "1500",
+		"CCTV_TAIWAN_MAX_SOURCES": "1500",
+		"CCTV_TALLINN_MAX_SOURCES": "1500",
+		"CCTV_TARKTEE_MAX_SOURCES": "1500",
+		"CCTV_TFL_MAX_SOURCES": "1500",
+		"CCTV_TORONTO_MAX_SOURCES": "1500",
+		"CCTV_TXDOT_MAX_SOURCES": "1500",
+		"CCTV_VEGVESEN_MAX_SOURCES": "1500",
+		"CCTV_WSDOT_MAX_SOURCES": "1500"
+	},
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	}
+}

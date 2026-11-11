@@ -117,7 +117,7 @@ test('the first view renders the corners, edges and bottom bar', async (t) => {
   );
   assert.match(
     root.querySelector('.hud-system').textContent,
-    /^KH11-\d+ {2}OPS-\d+$/,
+    /^TN-\d+ {2}ORB-\d+$/,
   );
   assert.deepEqual(
     [...root.querySelectorAll('.hud-right-edge .hud-readout')].map(

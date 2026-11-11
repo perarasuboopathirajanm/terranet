@@ -20,7 +20,7 @@ test('camera catalog and health use fixed source routes and caller cancellation'
       calls.push({ path, options });
       return new Response(
         JSON.stringify(
-          path.endsWith('/sources') ? { sources: [] } : { cameras: [] },
+          path.includes('/sources') ? { sources: [] } : { cameras: [] },
         ),
       );
     },
@@ -30,7 +30,7 @@ test('camera catalog and health use fixed source routes and caller cancellation'
   await source.getHealth({ signal: controller.signal });
   assert.deepEqual(
     calls.map((call) => call.path),
-    ['/api/cctv/sources', '/api/cctv/health'],
+    ['/api/cctv/sources?limit=1500', '/api/cctv/health'],
   );
   for (const { options } of calls) {
     assert.equal(options.signal, controller.signal);

@@ -50,7 +50,8 @@ export function createCctvSource({
   }
   return {
     getCatalog(options) {
-      return read('/api/cctv/sources', 'sources', options);
+      // The 3D layer gets a spread of 1500 cameras; the Explore tab lists all.
+      return read('/api/cctv/sources?limit=1500', 'sources', options);
     },
     getHealth(options) {
       return read('/api/cctv/health', 'cameras', options);

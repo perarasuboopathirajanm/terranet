@@ -78,10 +78,18 @@ export function mountAlertsPanel(
 
   const style = el('style', { textContent: STYLE });
   const badge = el('span', { className: 'atlas-badge zero', textContent: '0' });
+  const closeX = el('button', {
+    className: 'atlas-x',
+    textContent: '✕',
+    title: 'Close Alerts',
+    type: 'button',
+  });
+  closeX.setAttribute('aria-label', 'Close Alerts');
   const head = el('div', { className: 'atlas-head' }, [
     el('b', { textContent: 'ALERTS' }),
     badge,
     el('span', { textContent: '▾' }),
+    closeX,
   ]);
   const tabAlerts = el('button', { textContent: 'Alerts', className: 'on' });
   const tabWatch = el('button', { textContent: 'Watchlist' });
@@ -474,6 +482,10 @@ export function mountAlertsPanel(
     render();
   }
 
+  closeX.onclick = (event) => {
+    event.stopPropagation();
+    panel.classList.add('collapsed');
+  };
   head.onclick = async () => {
     panel.classList.toggle('collapsed');
     if (

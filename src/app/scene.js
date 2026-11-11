@@ -89,6 +89,8 @@ export async function createApplicationScene({
   });
   signal.throwIfAborted();
   if (tileset) {
+    // Load finer tiles (default 16) so buildings are sharp, not smeared.
+    tileset.maximumScreenSpaceError = 6;
     viewer.scene.primitives.add(tileset);
     // NOTE: Cesium World Terrain intentionally disabled — conflicts with Google 3D Tiles at high zoom.
     // Google Photorealistic 3D Tiles provide their own terrain/elevation.

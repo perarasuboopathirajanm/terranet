@@ -16,7 +16,7 @@ export const CCTV_SHARED_SOURCE_SLOTS = 4000;
  */
 export const DEFAULT_CCTV_MAX_SOURCES = 7350;
 /** Hard upper bound for CCTV_MAX_SOURCES; also sizes the health map. */
-export const CCTV_MAX_SOURCES_CEILING = 8000;
+export const CCTV_MAX_SOURCES_CEILING = 12000;
 /** Reference point for Austin camera prioritization (Congress & 6th). */
 export const AUSTIN_DOWNTOWN = { lat: 30.2672, lon: -97.7431 };
 /** Caltrans CCTV: one JSON feed per district, identical schema statewide. */

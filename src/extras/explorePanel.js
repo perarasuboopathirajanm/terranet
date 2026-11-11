@@ -6,10 +6,19 @@ import {
   filterByName,
   parseTle,
   satellitePosition,
+  solarSystemNow,
 } from './exploreCore.js';
 import { skeletonRows } from './theme.js';
+import { imageForSatellite } from './satelliteImages.js';
+import { openCosmos } from './cosmosView.js';
+import { groupByCountry } from './cameraCountries.js';
+import { MISSIONS, MISSIONS_AS_OF, missionCounts } from './missionsCore.js';
 
 const CATEGORIES = [
+  { id: 'cams', label: 'Cameras' },
+  { id: 'missions', label: 'Missions' },
+  { id: 'cosmos', label: 'Cosmos' },
+  { id: 'solar', label: 'Solar system' },
   { id: 'stars', label: 'Stars' },
   { id: 'holes', label: 'Black holes' },
   { id: 'planets', label: 'New planets' },
@@ -26,13 +35,16 @@ const SATELLITE_GROUP = 'stations';
  * the object's real direction, so the starfield lines up). Satellites are
  * approached from just above them.
  */
-export function createExploreTab(viewer) {
-  let category = 'stars';
+export function createExploreTab(viewer, { dataManager = null } = {}) {
+  let category = 'solar';
   let query = '';
   let satellites = null; // null while loading, [] when unavailable
   let satellitesRequested = false;
+  let cameraRows = null; // null while loading, [] when unavailable
+  let camerasRequested = false;
   let reticle = null;
   let reticleTimer = 0;
+  let card = null;
   let ctx = null;
 
   const rowsBox = document.createElement('div');
@@ -101,6 +113,30 @@ export function createExploreTab(viewer) {
     });
   }
 
+  function showCard(name) {
+    card?.remove();
+    card = null;
+    const image = imageForSatellite(name);
+    if (!image) return;
+    card = document.createElement('div');
+    card.className = 'atlas-card';
+    const img = document.createElement('img');
+    img.src = image.src;
+    img.alt = name;
+    const label = document.createElement('div');
+    label.className = 'atlas-card-label';
+    label.textContent = `${name} - ${image.caption}`;
+    const close = document.createElement('button');
+    close.textContent = 'x';
+    close.setAttribute('aria-label', 'Close picture');
+    close.onclick = () => {
+      card?.remove();
+      card = null;
+    };
+    card.append(img, label, close);
+    document.body.append(card);
+  }
+
   function flyToSatellite(entry) {
     const pos = satellitePosition(entry);
     if (!pos) return;
@@ -116,7 +152,10 @@ export function createExploreTab(viewer) {
         120_000,
       ),
       duration: 3,
-      complete: () => showReticle(entry.name),
+      complete: () => {
+        showReticle(entry.name);
+        showCard(entry.name);
+      },
     });
   }
 
@@ -136,6 +175,41 @@ export function createExploreTab(viewer) {
       });
   }
 
+  function loadCameras() {
+    if (camerasRequested) return;
+    camerasRequested = true;
+    fetch('/api/cctv/sources')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+      .then((payload) => {
+        cameraRows = groupByCountry(payload?.sources);
+      })
+      .catch(() => {
+        cameraRows = [];
+      })
+      .finally(() => {
+        if (category === 'cams') fillRows();
+      });
+  }
+
+  function flyToCountry(row) {
+    if (dataManager) {
+      Promise.resolve(
+        dataManager.setEnabled('cctv', true, { origin: 'user' }),
+      ).catch(() => {});
+    }
+    if (!row.hasBox) return;
+    const pad = Math.max(0.5, (row.east - row.west) * 0.15);
+    viewer.camera.flyTo({
+      destination: Cesium.Rectangle.fromDegrees(
+        Math.max(-180, row.west - pad),
+        Math.max(-90, row.south - pad),
+        Math.min(180, row.east + pad),
+        Math.min(90, row.north + pad),
+      ),
+      duration: 3,
+    });
+  }
+
   function skyRow(object, detail, onGo) {
     const row = document.createElement('div');
     row.className = 'atlas-row';
@@ -146,6 +220,15 @@ export function createExploreTab(viewer) {
     sub.className = 'atlas-sub';
     sub.textContent = detail;
     body.append(title, sub);
+    const image = imageForSatellite(object.name);
+    if (image) {
+      const thumb = document.createElement('img');
+      thumb.className = 'atlas-thumb';
+      thumb.src = image.src;
+      thumb.alt = '';
+      thumb.loading = 'lazy';
+      row.append(thumb);
+    }
     row.append(body);
     row.onclick = onGo;
     return row;
@@ -159,6 +242,82 @@ export function createExploreTab(viewer) {
       div.textContent = text;
       rowsBox.append(div);
     };
+
+    if (category === 'cams') {
+      if (cameraRows === null) {
+        rowsBox.append(...skeletonRows(ctx.el, 6));
+        return;
+      }
+      const list = filterByName(
+        cameraRows.map((r) => ({ ...r, name: r.country })),
+        query,
+      );
+      if (!list.length) {
+        return empty(
+          cameraRows.length
+            ? 'Nothing matches.'
+            : 'Camera list unavailable right now.',
+        );
+      }
+      for (const row of list) {
+        rowsBox.append(
+          skyRow(row, `${row.count.toLocaleString('en-US')} cameras`, () =>
+            flyToCountry(row),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (category === 'missions') {
+      const note = document.createElement('div');
+      note.className = 'atlas-empty';
+      note.textContent = `Spacecraft at the Moon, Mars and beyond. Hand-kept list as of ${MISSIONS_AS_OF}; open the Cosmos map and click a planet for its own list.`;
+      rowsBox.append(note);
+      const counts = missionCounts()
+        .map((c) => `${c.target} ${c.count}`)
+        .join(' · ');
+      const total = document.createElement('div');
+      total.className = 'atlas-sub';
+      total.textContent = `Working or on the way: ${counts}`;
+      rowsBox.append(total);
+      const list = filterByName(MISSIONS, query);
+      if (!list.length) return empty('Nothing matches.');
+      for (const m of list) {
+        const detail = [
+          `${m.target}, ${m.role}`,
+          `${m.agency}, ${m.launched}`,
+          m.status,
+          m.note,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        rowsBox.append(skyRow(m, detail, () => openCosmos()));
+      }
+      return;
+    }
+
+    if (category === 'cosmos') {
+      const open = document.createElement('button');
+      open.className = 'atlas-open';
+      open.textContent = 'Open the Cosmos map';
+      open.onclick = () => openCosmos();
+      const text = document.createElement('div');
+      text.className = 'atlas-empty';
+      text.textContent =
+        'See where we are: the solar system, nearby stars, the Milky Way, black holes and nearby galaxies, with distances from the Sun. Scroll to zoom, drag to move.';
+      rowsBox.append(text, open);
+      return;
+    }
+
+    if (category === 'solar') {
+      const list = filterByName(solarSystemNow(), query);
+      if (!list.length) return empty('Nothing matches.');
+      for (const o of list) {
+        rowsBox.append(skyRow(o, o.note, () => lookAtSky(o, o.name)));
+      }
+      return;
+    }
 
     if (category === 'stars' || category === 'holes') {
       const list = filterByName(
@@ -231,12 +390,14 @@ export function createExploreTab(viewer) {
           query = '';
           search.value = '';
           if (category === 'sats') loadSatellites();
+          if (category === 'cams') loadCameras();
           render(list, context);
         };
         return chip;
       }),
     );
     if (category === 'sats') loadSatellites();
+    if (category === 'cams') loadCameras();
     list.append(chips, search, rowsBox);
     fillRows();
   }
@@ -248,6 +409,7 @@ export function createExploreTab(viewer) {
     dispose() {
       clearTimeout(reticleTimer);
       reticle?.remove();
+      card?.remove();
     },
   };
 }

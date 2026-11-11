@@ -335,8 +335,8 @@ export class IntelHUD {
     };
 
     // Session-consistent pseudorandom identifiers (generated once at construction)
-    this._missionId = `KH11-${4000 + Math.floor(Math.random() * 200)}`;
-    this._sensorId = `OPS-${4100 + Math.floor(Math.random() * 100)}`;
+    this._missionId = `TN-${4000 + Math.floor(Math.random() * 200)}`;
+    this._sensorId = `ORB-${4100 + Math.floor(Math.random() * 100)}`;
     this._orbitNum = 47000 + Math.floor(Math.random() * 1000);
     this._passNum = 100 + Math.floor(Math.random() * 200);
 
@@ -385,7 +385,7 @@ export class IntelHUD {
       active: false,
       variant: this._variant,
       colors: null,
-      classification: 'TOP SECRET // SI-TK // NOFORN',
+      classification: 'TERRANET // LIVE EARTH // PUBLIC DATA',
       system: `${this._missionId}  ${this._sensorId}`,
       mode: t(MODE_LABELS.normal),
       summaryLabel: t('SUMMARY'),

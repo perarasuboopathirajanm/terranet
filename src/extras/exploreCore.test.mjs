@@ -7,6 +7,7 @@ import {
   filterByName,
   parseTle,
   satellitePosition,
+  solarSystemNow,
 } from './exploreCore.js';
 
 const ISS = `ISS (ZARYA)
@@ -52,4 +53,16 @@ test('satellitePosition gives a plausible low-orbit position', () => {
   assert.ok(Math.abs(pos.lat) <= 52, `lat ${pos.lat}`);
   assert.ok(pos.altKm > 350 && pos.altKm < 460, `alt ${pos.altKm}`);
   assert.equal(satellitePosition({ line1: 'x', line2: 'y' }), null);
+});
+
+test('solarSystemNow lists Sun, Moon and planets with valid coordinates', () => {
+  const bodies = solarSystemNow(new Date('2026-06-21T12:00:00Z'));
+  assert.equal(bodies.length, 9);
+  for (const b of bodies) {
+    assert.ok(b.ra >= 0 && b.ra < 360, `${b.name} ra ${b.ra}`);
+    assert.ok(b.dec >= -90 && b.dec <= 90, `${b.name} dec`);
+  }
+  // Near the June solstice the Sun sits at about +23 degrees declination.
+  const sun = bodies.find((b) => b.name === 'Sun');
+  assert.ok(sun.dec > 22 && sun.dec < 24, `sun dec ${sun.dec}`);
 });

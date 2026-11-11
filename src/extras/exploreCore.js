@@ -1,5 +1,7 @@
 import { twoline2satrec, propagate, gstime, eciToGeodetic } from 'satellite.js';
+import * as Astronomy from 'astronomy-engine';
 import { raDecToUnitVector } from '../sky/stars.js';
+import { SKY_BODIES } from './skyCore.js';
 
 // Positions are J2000 right ascension and declination in degrees.
 export const STARS = Object.freeze([
@@ -195,4 +197,23 @@ export function satellitePosition(entry, date = new Date()) {
   } catch {
     return null;
   }
+}
+
+const AU_KM = 149_597_870.7;
+
+/**
+ * The Sun, Moon and planets as they are right now, in the same J2000 form as
+ * the star list (ra, dec in degrees), with their distance in the note.
+ */
+export function solarSystemNow(date = new Date()) {
+  const observer = new Astronomy.Observer(0, 0, 0);
+  return SKY_BODIES.map((name) => {
+    const eq = Astronomy.Equator(name, date, observer, false, true);
+    const km = eq.dist * AU_KM;
+    const note =
+      name === 'Moon'
+        ? `${Math.round(km).toLocaleString()} km away`
+        : `${eq.dist.toFixed(2)} AU from Earth (${(eq.dist * 8.317).toFixed(1)} light-minutes)`;
+    return { name, ra: eq.ra * 15, dec: eq.dec, note };
+  });
 }
