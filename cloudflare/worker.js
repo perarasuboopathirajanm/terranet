@@ -360,7 +360,13 @@ function getRouter() {
     windProxy(),
     gbfsProxy(),
     terrainHeightsProxy(),
-    radioBrowserProxy(),
+    // Workers cannot open raw sockets, so the Node-only address pinning is
+    // replaced by plain fetch. The host is still limited to Radio Browser's own
+    // servers, and Workers cannot reach private networks.
+    radioBrowserProxy({
+      fetchImpl: (url, options) => fetch(url, options),
+      lookupImpl: async () => [{ address: '91.98.4.78', family: 4 }],
+    }),
     inaturalistProxy(),
     militaryInstallationsProxy(),
     transitProxy(),
@@ -531,7 +537,28 @@ export default {
         }
         if (routed?.ok) return routed;
         const plain = await flights();
-        return plain.ok ? plain : (routed ?? plain);
+        if (plain.ok) return plain;
+        // OpenSky refuses this host. With no map position in the request the
+        // regional fallback has nothing to centre on, so use the visitor's own
+        // location (Cloudflare knows it) and show the aircraft around them.
+        const here = new URL(request.url);
+        const lat = Number(request.cf?.latitude);
+        const lon = Number(request.cf?.longitude);
+        if (
+          !here.searchParams.has('lat') &&
+          Number.isFinite(lat) &&
+          Number.isFinite(lon)
+        ) {
+          here.searchParams.set('lat', lat.toFixed(4));
+          here.searchParams.set('lon', lon.toFixed(4));
+          try {
+            const near = await getRouter()(new Request(here, request));
+            if (near?.ok) return near;
+          } catch {
+            /* fall through to the original answer */
+          }
+        }
+        return routed ?? plain;
       }
       if (pathname === '/api/fire-perimeters') return firePerimeters();
       let m = pathname.match(/^\/api\/celestrak\/([a-z0-9-]+)$/);

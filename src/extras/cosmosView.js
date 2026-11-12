@@ -145,6 +145,12 @@ export function openCosmos({ preset = null, onClose = null } = {}) {
     img.src = `/textures/planets/${info.texture}`;
     images[name] = img;
   }
+  // Earth is drawn from a real NASA photo of the whole globe (Blue Marble style:
+  // blue oceans, green land, white clouds) instead of a flat map cropped round.
+  const galaxyStyle = 'map';
+  const earthPhoto = new Image();
+  earthPhoto.onload = () => schedule();
+  earthPhoto.src = '/textures/cosmos/earth.jpg';
 
   const root = document.createElement('div');
   root.className = 'cosmos';
@@ -157,7 +163,12 @@ export function openCosmos({ preset = null, onClose = null } = {}) {
   presetBox.className = 'cosmos-presets';
   const close = document.createElement('button');
   close.textContent = 'Close';
-  head.append(title, presetBox, close);
+  const lineupBtn = document.createElement('button');
+  lineupBtn.type = 'button';
+  lineupBtn.textContent = 'Lineup';
+  lineupBtn.title = 'Poster view: the Sun and planets in a row, click one for a real picture';
+  lineupBtn.onclick = () => import('./solarLineup.js').then((m) => m.openSolarLineup());
+  head.append(title, presetBox, lineupBtn, close);
   const facts = document.createElement('div');
   facts.className = 'cosmos-facts';
   facts.textContent =
@@ -346,7 +357,8 @@ export function openCosmos({ preset = null, onClose = null } = {}) {
       return;
     }
     const k = 69 / scale; // the NASA map is 69 light-years per picture pixel
-    const mapReady = mapImg.complete && mapImg.naturalWidth > 0;
+    const mapReady =
+      galaxyStyle === 'map' && mapImg.complete && mapImg.naturalWidth > 0;
     ctx.save();
     ctx.translate(gx, gy);
     ctx.scale(1, Math.cos(tilt));
@@ -445,7 +457,14 @@ export function openCosmos({ preset = null, onClose = null } = {}) {
     ctx.beginPath();
     ctx.arc(px, py, r, 0, Math.PI * 2);
     ctx.clip();
-    if (img?.complete && img.naturalWidth) {
+    if (
+      b.name === 'Earth' &&
+      earthPhoto.complete &&
+      earthPhoto.naturalWidth === 1280
+    ) {
+      // The globe fills the middle of the photo: centre (640, 625), radius 545.
+      ctx.drawImage(earthPhoto, 95, 80, 1090, 1090, px - r, py - r, r * 2, r * 2);
+    } else if (img?.complete && img.naturalWidth) {
       // The picture is a flat map: show its central square as the disc.
       const side = img.naturalHeight;
       ctx.drawImage(
@@ -463,7 +482,7 @@ export function openCosmos({ preset = null, onClose = null } = {}) {
       ctx.fillStyle = info.color;
       ctx.fillRect(px - r, py - r, r * 2, r * 2);
     }
-    if (b.kind !== 'sun' && r > 3) {
+    if (b.kind !== 'sun' && b.name !== 'Earth' && r > 3) {
       // Night side away from the Sun.
       const [sx, sy] = toScreen(0, 0);
       const dx = px - sx;

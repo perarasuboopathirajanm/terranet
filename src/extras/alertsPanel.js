@@ -52,7 +52,7 @@ function el(tag, props = {}, children = []) {
 }
 
 /**
- * Mount the Atlas Eye alerts and watchlist panel over a running globe.
+ * Mount the Terranet alerts and watchlist panel over a running globe.
  * Returns a dispose function.
  */
 export function mountAlertsPanel(

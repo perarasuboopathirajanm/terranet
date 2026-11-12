@@ -1,4 +1,4 @@
-// Pure logic for the Atlas Eye alerts feed and watchlist. No DOM, no Cesium.
+// Pure logic for the Terranet alerts feed and watchlist. No DOM, no Cesium.
 
 export const USGS_URL =
   'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson';

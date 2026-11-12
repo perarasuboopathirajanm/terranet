@@ -9,6 +9,10 @@ export const STYLE = `
   backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);
   border:1px solid rgba(0,255,102,.22);
   box-shadow:10px 14px 30px rgba(0,0,0,.5),-6px -6px 20px rgba(0,255,102,.05),inset 1px 1px 0 rgba(255,255,255,.09)}
+.atlas-panel{max-height:min(62vh,460px)!important;overflow:hidden}
+.atlas-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}
+.atlas-list{flex:1 1 auto;min-height:0}
+.atlas-row{padding:7px 10px;margin:0 0 5px;font-size:10.5px}
 .atlas-panel.collapsed{top:auto;bottom:46px}
 .atlas-panel.collapsed .atlas-body{display:none}
 .atlas-panel.collapsed .atlas-x{display:none}

@@ -1,5 +1,19 @@
 > **Terranet** is a fork of [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) by Bilawal Sidhu (MIT). It adds an alerts feed, watchlist, space-weather and sky tabs, an exoplanet feed, an Explore tab and a new look. See [FORK_NOTES.md](FORK_NOTES.md). The rest of this README is the original project's.
 
+## What's new in Terranet
+
+Terranet runs on Cloudflare Workers at https://terranet.terranet-dev.workers.dev. Everything below was added or fixed on top of God's Eye View.
+
+- **Live data that works on the Worker:** flights (OpenSky, with an adsb.lol regional fallback around the map or the visitor), wind (Open-Meteo fallback when the GRIB decoder cannot run), rain radar, satellite clouds and lightning (NOAA nowCOAST), radio stations (Radio Browser), cyclones, fire perimeters, GNSS integrity, drone airspace, whale sightings, FIRMS fires, TomTom traffic and a saved launches list.
+- **Cameras and street level:** the CCTV and street-level layers are kept; their sources are checked live and anything unavailable says so instead of failing silently.
+- **COSMOS:** real NASA/ESA pictures for the Sun, planets, Moon, stars, black holes and galaxies, with credits. A poster-style **Lineup** of the planets; click one for a real picture.
+- **Satellites:** pictures for Hubble, ISS, Soyuz, Landsat, Fermi, Swift, TESS, GPS, Starlink and more when you click them.
+- **One MAP button:** 3D City, Bing Aerial, Aerial + Names, Esri Satellite and Voyager map. Polar caps hide the stretched disc past 85 degrees.
+- **Cleaner screen:** a fixed, compact layout for the menus, a smaller header and credits, and an Alerts panel that scrolls inside its box.
+- **Terranet name** throughout the app. The original MIT license and credits to the God's Eye View authors are kept.
+
+Pictures are NASA/ESA public domain or CC BY / CC0, with credits in each caption. Some pictures are artist's concepts or were taken by a satellite rather than of it, and the captions say so.
+
 <div align="center">
 
 # 🌐 God's Eye View

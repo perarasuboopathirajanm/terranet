@@ -315,7 +315,10 @@ export function weatherProxy({
     const response = await fetchImpl(url, {
       signal,
       redirect: 'error',
-      headers: { Accept: image ? 'image/png' : 'application/xml,text/xml' },
+      headers: {
+        Accept: image ? 'image/png' : 'application/xml,text/xml',
+        'User-Agent': 'Terranet/1.0 (weather layer)',
+      },
     });
     if (
       !response.ok ||

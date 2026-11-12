@@ -90,7 +90,7 @@ function applyTerranetStart(_viewer, manager) {
 application
   .start()
   .then((components) => {
-    // Atlas Eye extras: live alerts feed and a watchlist over the running globe.
+    // Terranet extras: live alerts feed and a watchlist over the running globe.
     // A failure here must not take down the globe, so it is handled separately.
     Promise.all([
       import('./extras/alertsPanel.js'),
@@ -99,6 +99,7 @@ application
       import('./extras/mapSwitch.js'),
       import('./extras/closeButtons.js'),
       import('./extras/polarCaps.js'),
+      import('./extras/dragMove.js'),
     ])
       .then(
         ([
@@ -108,6 +109,7 @@ application
           { mountMapSwitch },
           { mountCloseButtons },
           { mountPolarCaps },
+          { mountDragMove },
         ]) => {
           const { viewer, mapStackController } = components.scene;
           // For debugging in the browser console.
@@ -120,12 +122,13 @@ application
           mountAlertsPanel(viewer, {
             extraTabs: [createExploreTab(viewer, { dataManager })],
           });
+          mountDragMove();
         },
       )
-      .catch((error) => console.error('Atlas Eye extras failed:', error));
+      .catch((error) => console.error('Terranet extras failed:', error));
   })
   .catch((error) => {
-    console.error('Atlas Eye initialization failed:', error);
+    console.error('Terranet initialization failed:', error);
     const loaderStatus = document.querySelector(
       '#loading-screen .loader-status',
     );

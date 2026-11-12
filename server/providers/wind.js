@@ -1,6 +1,18 @@
 import { fetchGfsWind } from './wind/gfs.js';
 import { fetchIfsWind } from './wind/ifs.js';
 import { decodeWindGribMessage } from './wind/decode.js';
+import { fetchOpenMeteoWind } from './wind/openMeteo.js';
+
+// The GRIB decoder is a 39 MB WASM build that Cloudflare Workers cannot start.
+// When it fails, the same grid is built from Open-Meteo's plain JSON instead.
+const withFallback = (primary) => async (options) => {
+  try {
+    return await primary(options);
+  } catch (error) {
+    options.signal?.throwIfAborted();
+    return fetchOpenMeteoWind(options);
+  }
+};
 import { weatherScalarMetadata, weatherScalarError } from './wind/grid.js';
 
 // Data, not UI copy: the client (src/layers/wind/index.js) marks this exact
@@ -15,7 +27,10 @@ export function windProxy({
   targetDx = 1,
   ttlMs = 3600_000,
   timeoutMs = 40_000,
-  models = { gfs: fetchGfsWind, ifs: fetchIfsWind },
+  models = {
+    gfs: withFallback(fetchGfsWind),
+    ifs: withFallback(fetchIfsWind),
+  },
 } = {}) {
   // Request validation limits these maps to 2 models × 3 overlays.
   const caches = new Map();
