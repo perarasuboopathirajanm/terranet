@@ -24,7 +24,7 @@ const PUBLIC_NOMINATIM_HOST = 'nominatim.openstreetmap.org';
  */
 const NOMINATIM_HEADERS = Object.freeze({
   'User-Agent':
-    'gods-eye-view/0.1 (+https://github.com/bilawalsidhu/gods-eye-view)',
+    'terranet/0.1 (+https://github.com/bilawalsidhu/gods-eye-view)',
   Referer: 'https://github.com/bilawalsidhu/gods-eye-view',
 });
 

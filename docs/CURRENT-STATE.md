@@ -1,4 +1,4 @@
-# God's Eye View Current State
+# Terranet Current State
 
 Docker Compose mounts the checkout with the shared SELinux `:z` label so
 containers can read it on enforcing SELinux hosts. The separate image-owned
@@ -345,12 +345,12 @@ panel that holds its row, and `set_panel_open` reaches it as
 `utilities-panel` or by "utilities", "draw", "drawing" or "import". On a phone
 it sits collapsed in the Layers sheet under Data Layers.
 
-## God's Eye View in conversations — October 2, 2026
+## Terranet in conversations — October 2, 2026
 
-Tool answers that can be shown in God's Eye View include a view: camera, layers,
+Tool answers that can be shown in Terranet include a view: camera, layers,
 style, map, marks and an aircraft or satellite to follow, written in the
 share-link format (`gods-eye-view/view`). `show_in_gods_eye_view` shows a view as live
-God's Eye View inside clients that display MCP Apps, and as a link everywhere.
+Terranet inside clients that display MCP Apps, and as a link everywhere.
 The panel runs the app's panel build (`npm run build:panel`, served at
 `/panel/`) and loads it, with its data, through the MCP server, so it works
 in Claude Desktop and in the Codex and ChatGPT desktop apps with a local
@@ -6459,7 +6459,7 @@ apply to `public/` assets or built-preview serving.
 - A successful Pinokio install writes the owner-only `pinokio/.installed`
   marker. The nested launcher menu resolves that marker from its own directory:
   an absent marker exposes Install, a present marker exposes Start, and a
-  running server with a captured ready URL exposes Open God's Eye View. That
+  running server with a captured ready URL exposes Open Terranet. That
   default item uses Pinokio's `popout` option to open the system browser; the
   Server item retains the launcher console. The app's framing headers stay
   unchanged. This does not assume all Pinokio desktop versions enforce those
@@ -7498,5 +7498,5 @@ their registered providers at request time and are not included in this data
 file. The additive `/api/cctv/sources` metadata includes provider source links,
 browser-only media links, refresh cadence, and location provenance where
 available. When MLIT serves its recognized adjustment image, `/api/cctv/frame`
-returns a God’s Eye maintenance card and `/api/cctv/health` reports the camera
+returns a Terranet maintenance card and `/api/cctv/health` reports the camera
 as degraded with the provider-adjustment reason.

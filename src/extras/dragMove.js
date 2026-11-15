@@ -35,24 +35,36 @@ function save(all) {
   }
 }
 
-/** The box around a group and everything inside it (some groups are 0x0 shells). */
+/** True when an element is really on screen (not hidden, not zero-sized). */
+function shown(el) {
+  const r = el.getBoundingClientRect();
+  if (r.width < 2 || r.height < 2) return false;
+  const c = getComputedStyle(el);
+  return c.display !== 'none' && c.visibility !== 'hidden' && Number(c.opacity) > 0.05;
+}
+
+/**
+ * The box around what the user sees of a group. Some groups are empty shells
+ * with hidden pop-out panels inside them, so only the shown items count: the
+ * group itself when it has a size, otherwise its direct children.
+ */
 function extent(node) {
+  const items = shown(node)
+    ? [node]
+    : [...node.children].filter(shown);
+  if (!items.length) return null;
   let left = Infinity;
   let top = Infinity;
   let right = -Infinity;
   let bottom = -Infinity;
-  const visit = (el) => {
+  for (const el of items) {
     const r = el.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) {
-      left = Math.min(left, r.left);
-      top = Math.min(top, r.top);
-      right = Math.max(right, r.right);
-      bottom = Math.max(bottom, r.bottom);
-    }
-  };
-  visit(node);
-  for (const el of node.querySelectorAll('*')) visit(el);
-  return Number.isFinite(left) ? { left, top, right, bottom } : null;
+    left = Math.min(left, r.left);
+    top = Math.min(top, r.top);
+    right = Math.max(right, r.right);
+    bottom = Math.max(bottom, r.bottom);
+  }
+  return { left, top, right, bottom };
 }
 
 function apply(node, x, y) {
@@ -90,12 +102,26 @@ function attach(node, key, all, touch, home, lock) {
       if (tries < 90) requestAnimationFrame(() => goHome(tries + 1));
       return;
     }
-    const x = offset.x + home[0] * innerWidth - box.left;
-    const y = offset.y + home[1] * innerHeight - box.top;
+    const width = box.right - box.left;
+    const height = box.bottom - box.top;
+    // Keep the whole group inside the window, with a small margin.
+    const targetLeft = Math.min(
+      Math.max(8, home[0] * innerWidth),
+      Math.max(8, innerWidth - width - 8),
+    );
+    const targetTop = Math.min(
+      Math.max(8, home[1] * innerHeight),
+      Math.max(8, innerHeight - height - 8),
+    );
+    const x = offset.x + targetLeft - box.left;
+    const y = offset.y + targetTop - box.top;
     offset = { x, y };
     apply(node, x, y);
   };
   goHome();
+  // Panels fill in and animate after load; settle the position again once they have.
+  setTimeout(() => goHome(), 800);
+  setTimeout(() => goHome(), 2500);
 
   let start = null;
   let dragging = false;

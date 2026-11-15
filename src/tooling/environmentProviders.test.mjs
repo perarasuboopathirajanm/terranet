@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promises as fsp } from 'node:fs';
-import { terrainHeightsProxy } from 'gods-eye-view/server/providers/terrain';
-import { tomtomProxy } from 'gods-eye-view/server/providers/traffic';
-import { firmsProxy } from 'gods-eye-view/server/providers/firms';
-import { gbfsProxy } from 'gods-eye-view/server/providers/gbfs';
+import { terrainHeightsProxy } from 'terranet/server/providers/terrain';
+import { tomtomProxy } from 'terranet/server/providers/traffic';
+import { firmsProxy } from 'terranet/server/providers/firms';
+import { gbfsProxy } from 'terranet/server/providers/gbfs';
 import { localProviderPlugins } from '../../server/providers/local.js';
 import { makeFixtureRoot } from './fixtureRoot.mjs';
 

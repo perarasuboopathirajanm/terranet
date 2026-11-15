@@ -406,7 +406,7 @@
 - Add continuous globe rotation with direction and speed controls and a globe-fit
   check before starting (manjunath22466, #1225).
 
-- Open God's Eye View from Pinokio in the system browser using the supported
+- Open Terranet from Pinokio in the system browser using the supported
   `popout` menu option. The application's framing policy is unchanged
   (NukeThemAII, #1222).
 
@@ -720,7 +720,7 @@
   #452).
 
 - Ship a web app manifest and raster home-screen icons, so adding the app to a
-  phone home screen or installing it on desktop uses the God's Eye View mark
+  phone home screen or installing it on desktop uses the Terranet mark
   instead of a blank tile. The icons are generated from `public/logo.svg` by
   `node scripts/generate-icons.mjs` and committed, so a plain `vite build` needs
   no image toolchain. The existing SVG favicon still serves the browser tab.
@@ -1214,7 +1214,7 @@
   caveat for the screen. The model is asked to answer in one short phrase.
 - The weather and Recent Imagery panels can be opened by voice.
 
-## [0.2.1] — 2026-10-02 — God's Eye View through Your Agent (with security fixes and other features)
+## [0.2.1] — 2026-10-02 — Terranet through Your Agent (with security fixes and other features)
 
 - Ship each bundled data pack once. The region, marine, admin-boundary,
   county, military-name and neighborhood packs were emitted twice by the
@@ -1288,9 +1288,9 @@
 - Move the aligned Cyber side-panel rails upward on desktop so the left stack
   clears the lower coordinate card; keep Cockpit's independent visor layout.
 
-## [0.2.0] — 2026-10-02 — God's Eye View through Your Agent
+## [0.2.0] — 2026-10-02 — Terranet through Your Agent
 
-- Show God's Eye View inside AI conversations. Answers that can be shown
+- Show Terranet inside AI conversations. Answers that can be shown
   include a view (camera, layers, style, map, marks, something to follow),
   and `show_in_gods_eye_view` displays it as the live globe in clients that
   support MCP Apps, such as Claude Desktop and the Codex and ChatGPT desktop
